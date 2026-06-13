@@ -56,7 +56,23 @@ export async function POST(req: Request) {
 
     if (aiResponse.riskScores && aiResponse.riskScores.length > 0) {
       const top = aiResponse.riskScores[0];
-      response += `\n\n⚠️ *RISK ALERT*\n*${top.disease}*: ${top.probability}% ${top.level}\n\n📞 Call *104* for free health advice\n🚑 Call *108* for ambulance`;
+      response += `\n\n⚠️ *RISK ALERT*\n*${top.disease}*: ${top.probability}% ${top.level}\n\n📞 Call *104* for free health advice\n🚑 Call *108* for ambulance\n\nReply *ABHA* to get your Health ID or *PHC* to book a clinic visit.`;
+    }
+
+    const bodyLower = Body.toLowerCase();
+    if (bodyLower.includes("abha") || bodyLower.includes("ayushman") || bodyLower.includes("bharat") || bodyLower.includes("health id")) {
+      response = `🆔 *Your ABHA Health ID*\n91-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}\n\nThis is your Ayushman Bharat Digital Health ID. Visit your nearest PHC with this number.`;
+      sessions.delete(sessionKey);
+    }
+
+    if (bodyLower.includes("phc") || bodyLower.includes("clinic")) {
+      response = `🏥 *Nearest PHC Booked*\n\nPrimary Health Centre\nBangalore Rural District\n📍 Visit with your Aadhaar card\n⏰ Timing: 9AM - 5PM (Mon-Sat)\n\n✅ Appointment confirmed. An alert has been sent to the PHC.`;
+      sessions.delete(sessionKey);
+    }
+
+    if (bodyLower === "reset" || bodyLower === "start") {
+      sessions.delete(sessionKey);
+      response = "नमस्ते! / Hello! I am Aarogya AI. Please describe your symptoms and I will analyze them based on official ICMR health guidelines.";
     }
 
     return NextResponse.json({ response });

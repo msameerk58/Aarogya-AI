@@ -17,10 +17,13 @@ export default async function FeaturesPage(props: { params: Promise<{ locale: st
             Aarogya AI
           </Link>
           <div className="hidden md:flex items-center gap-8 font-['Plus_Jakarta_Sans'] text-sm font-medium tracking-tight">
-            <Link className="text-primary font-semibold transition-colors duration-200" href={`/${locale}/features`}>Features</Link>
+            <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/features`}>Features</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/technology`}>Technology</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/impact`}>Impact</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/about`}>About</Link>
+            <Link className="text-error font-bold hover:text-error/80 transition-colors duration-200 flex items-center gap-1.5" href={`/${locale}/emergency`}>
+              <svg viewBox="0 0 100 100" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="15" fill="currentColor"/><path d="M 35 15 H 65 V 35 H 85 V 65 H 65 V 85 H 35 V 65 H 15 V 35 H 35 Z" fill="white"/></svg> Emergency
+            </Link>
           </div>
           <Link 
             className="bg-primary hover:bg-primary-container text-on-primary px-5 py-2 rounded-xl font-medium transition-all active:scale-95 duration-150"

@@ -1,591 +1,559 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Phone, PhoneOff, Mic, Volume2, Signal, Battery, Wifi, PhoneCall } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Battery, Delete, Mic, Phone, PhoneCall, PhoneOff, RotateCcw, Signal, Volume2, Wifi } from "lucide-react";
 
-type CallState = "IDLE" | "CALLING" | "CONNECTED" | "ENDED";
-type Language = "hi-IN" | "en-IN" | "ta-IN" | "te-IN" | "kn-IN" | "bn-IN";
+type CallState = "IDLE" | "MENU" | "QUESTIONS" | "SPEAK" | "ENDED";
+type Language = "en-IN" | "mr-IN" | "hi-IN" | "ta-IN" | "te-IN" | "kn-IN" | "bn-IN";
+type Answer = "yes" | "no";
 
-const LANG_OPTIONS = [
-  { code: "hi-IN" as Language, label: "हिंदी", name: "Hindi" },
-  { code: "en-IN" as Language, label: "English", name: "English" },
-  { code: "ta-IN" as Language, label: "தமிழ்", name: "Tamil" },
-  { code: "te-IN" as Language, label: "తెలుగు", name: "Telugu" },
-  { code: "kn-IN" as Language, label: "ಕನ್ನಡ", name: "Kannada" },
-  { code: "bn-IN" as Language, label: "বাংলা", name: "Bengali" },
-];
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
-interface ScriptStep {
-  speaker: "IVR" | "USER";
-  text: string;
-  romanized?: string; // For browser TTS fallback
-  delay: number;
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
 }
 
-const SCRIPTS: Record<Language, ScriptStep[]> = {
-  "hi-IN": [
-    { speaker: "IVR",  text: "Aarogya AI mein swagat hai. Hindi ke liye 1, English ke liye 2, Tamil ke liye 3, Telugu ke liye 4, Kannada ke liye 5, Bengali ke liye 6 dabayen.", delay: 1000 },
-    { speaker: "USER", text: "1 dabaya — Hindi", delay: 6000 },
-    { speaker: "IVR",  text: "Namaste! Kya aapko 2 hafte se zyada khansi hai? Haan ke liye 1, Nahi ke liye 2 dabayen.", delay: 8000 },
-    { speaker: "USER", text: "1 dabaya — Haan", delay: 13000 },
-    { speaker: "IVR",  text: "Kya aapko raat ko pasina aata hai? Haan ke liye 1, Nahi ke liye 2 dabayen.", delay: 15000 },
-    { speaker: "USER", text: "1 dabaya — Haan", delay: 20000 },
-    { speaker: "IVR",  text: "Kya aapka wajan kam hua hai? Haan ke liye 1, Nahi ke liye 2 dabayen.", delay: 22000 },
-    { speaker: "USER", text: "1 dabaya — Haan", delay: 27000 },
-    { speaker: "IVR",  text: "Kya aapko bukhar hai? Haan ke liye 1, Nahi ke liye 2 dabayen.", delay: 29000 },
-    { speaker: "USER", text: "1 dabaya — Haan", delay: 34000 },
-    { speaker: "IVR",  text: "Kya aapko saans lene mein takleef hai? Haan ke liye 1, Nahi ke liye 2 dabayen.", delay: 36000 },
-    { speaker: "USER", text: "1 dabaya — Haan", delay: 41000 },
-    { speaker: "IVR",  text: "Aapka risk score UCCHA hai. TB ke lakshan hain. Turant Ramnagar PHC jayen. SMS bheja ja raha hai. Dhanyavaad.", delay: 43000 },
-  ],
-  "en-IN": [
-    { speaker: "IVR",  text: "Welcome to Aarogya AI. Press 1 for Hindi, 2 for English, 3 for Tamil, 4 for Telugu, 5 for Kannada, 6 for Bengali.", delay: 1000 },
-    { speaker: "USER", text: "Pressed 2 — English", delay: 6000 },
-    { speaker: "IVR",  text: "Hello! Do you have cough for more than 2 weeks? Press 1 for Yes, 2 for No.", delay: 8000 },
-    { speaker: "USER", text: "Pressed 1 — Yes", delay: 13000 },
-    { speaker: "IVR",  text: "Do you have night sweats? Press 1 for Yes, 2 for No.", delay: 15000 },
-    { speaker: "USER", text: "Pressed 1 — Yes", delay: 20000 },
-    { speaker: "IVR",  text: "Have you lost weight recently? Press 1 for Yes, 2 for No.", delay: 22000 },
-    { speaker: "USER", text: "Pressed 1 — Yes", delay: 27000 },
-    { speaker: "IVR",  text: "Do you have fever? Press 1 for Yes, 2 for No.", delay: 29000 },
-    { speaker: "USER", text: "Pressed 1 — Yes", delay: 34000 },
-    { speaker: "IVR",  text: "Do you have difficulty breathing? Press 1 for Yes, 2 for No.", delay: 36000 },
-    { speaker: "USER", text: "Pressed 1 — Yes", delay: 41000 },
-    { speaker: "IVR",  text: "Your risk is HIGH. TB symptoms detected. Please visit Ramnagar PHC immediately. SMS sent. Thank you.", delay: 43000 },
-  ],
-  "ta-IN": [
-    { speaker: "IVR",  text: "Aarogya AI வரவேற்கிறது. Hindi க்கு 1, English க்கு 2, Tamil க்கு 3, Telugu க்கு 4, Kannada க்கு 5, Bengali க்கு 6 அழுத்தவும்.", delay: 1000 },
-    { speaker: "USER", text: "3 அழுத்தினார் — Tamil", delay: 6000 },
-    { speaker: "IVR",  text: "வணக்கம்! உங்களுக்கு 2 வாரத்திற்கும் மேல் இருமல் உள்ளதா? ஆம் என்றால் 1, இல்லை என்றால் 2 அழுத்தவும்.", delay: 8000 },
-    { speaker: "USER", text: "1 அழுத்தினார் — ஆம்", delay: 13000 },
-    { speaker: "IVR",  text: "இரவில் வியர்க்கிறதா? ஆம் என்றால் 1, இல்லை என்றால் 2 அழுத்தவும்.", delay: 15000 },
-    { speaker: "USER", text: "1 அழுத்தினார் — ஆம்", delay: 20000 },
-    { speaker: "IVR",  text: "எடை குறைந்துள்ளதா? ஆம் என்றால் 1, இல்லை என்றால் 2 அழுத்தவும்.", delay: 22000 },
-    { speaker: "USER", text: "1 அழுத்தினார் — ஆம்", delay: 27000 },
-    { speaker: "IVR",  text: "காய்ச்சல் உள்ளதா? ஆம் என்றால் 1, இல்லை என்றால் 2 அழுத்தவும்.", delay: 29000 },
-    { speaker: "USER", text: "1 அழுத்தினார் — ஆம்", delay: 34000 },
-    { speaker: "IVR",  text: "மூச்சு விடுவதில் சிரமம் உள்ளதா? ஆம் என்றால் 1, இல்லை என்றால் 2 அழுத்தவும்.", delay: 36000 },
-    { speaker: "USER", text: "1 அழுத்தினார் — ஆம்", delay: 41000 },
-    { speaker: "IVR",  text: "உங்கள் ஆபத்து அதிகம். TB அறிகுறிகள் உள்ளன. உடனடியாக Ramnagar PHC செல்லுங்கள். SMS அனுப்பப்பட்டது. நன்றி.", delay: 43000 },
-  ],
-  "te-IN": [
-    { speaker: "IVR",  text: "Aarogya AI కి స్వాగతం. Hindi కి 1, English కి 2, Tamil కి 3, Telugu కి 4, Kannada కి 5, Bengali కి 6 నొక్కండి.", delay: 1000 },
-    { speaker: "USER", text: "4 నొక్కారు — Telugu", delay: 6000 },
-    { speaker: "IVR",  text: "నమస్కారం! మీకు 2 వారాల పైగా దగ్గు ఉందా? అవును కోసం 1, కాదు కోసం 2 నొక్కండి.", delay: 8000 },
-    { speaker: "USER", text: "1 నొక్కారు — అవును", delay: 13000 },
-    { speaker: "IVR",  text: "రాత్రి చెమటలు వస్తున్నాయా? అవును కోసం 1, కాదు కోసం 2 నొక్కండి.", delay: 15000 },
-    { speaker: "USER", text: "1 నొక్కారు — అవును", delay: 20000 },
-    { speaker: "IVR",  text: "బరువు తగ్గిందా? అవును కోసం 1, కాదు కోసం 2 నొక్కండి.", delay: 22000 },
-    { speaker: "USER", text: "1 నొక్కారు — అవును", delay: 27000 },
-    { speaker: "IVR",  text: "జ్వరం ఉందా? అవును కోసం 1, కాదు కోసం 2 నొక్కండి.", delay: 29000 },
-    { speaker: "USER", text: "1 నొక్కారు — అవును", delay: 34000 },
-    { speaker: "IVR",  text: "శ్వాస తీసుకోవడంలో ఇబ్బంది ఉందా? అవును కోసం 1, కాదు కోసం 2 నొక్కండి.", delay: 36000 },
-    { speaker: "USER", text: "1 నొక్కారు — అవును", delay: 41000 },
-    { speaker: "IVR",  text: "మీ రిస్క్ HIGH. TB లక్షణాలు ఉన్నాయి. వెంటనే Ramnagar PHC వెళ్ళండి. SMS పంపబడింది. ధన్యవాదాలు.", delay: 43000 },
-  ],
-  "kn-IN": [
-    { speaker: "IVR",  text: "Aarogya AI ಗೆ ಸ್ವಾಗತ. Hindi ಗೆ 1, English ಗೆ 2, Tamil ಗೆ 3, Telugu ಗೆ 4, Kannada ಗೆ 5, Bengali ಗೆ 6 ಒತ್ತಿರಿ.", delay: 1000 },
-    { speaker: "USER", text: "5 ಒತ್ತಿದರು — Kannada", delay: 6000 },
-    { speaker: "IVR",  text: "ನಮಸ್ಕಾರ! ನಿಮಗೆ 2 ವಾರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕೆಮ್ಮು ಇದೆಯೇ? ಹೌದು ಗೆ 1, ಇಲ್ಲ ಗೆ 2 ಒತ್ತಿರಿ.", delay: 8000 },
-    { speaker: "USER", text: "1 ಒತ್ತಿದರು — ಹೌದು", delay: 13000 },
-    { speaker: "IVR",  text: "ರಾತ್ರಿ ಬೆವರು ಬರುತ್ತಿದೆಯೇ? ಹೌದು ಗೆ 1, ಇಲ್ಲ ಗೆ 2 ಒತ್ತಿರಿ.", delay: 15000 },
-    { speaker: "USER", text: "1 ಒತ್ತಿದರು — ಹೌದು", delay: 20000 },
-    { speaker: "IVR",  text: "ತೂಕ ಕಡಿಮೆಯಾಗಿದೆಯೇ? ಹೌದು ಗೆ 1, ಇಲ್ಲ ಗೆ 2 ಒತ್ತಿರಿ.", delay: 22000 },
-    { speaker: "USER", text: "1 ಒತ್ತಿದರು — ಹೌದು", delay: 27000 },
-    { speaker: "IVR",  text: "ಜ್ವರ ಇದೆಯೇ? ಹೌದು ಗೆ 1, ಇಲ್ಲ ಗೆ 2 ಒತ್ತಿರಿ.", delay: 29000 },
-    { speaker: "USER", text: "1 ಒತ್ತಿದರು — ಹೌದು", delay: 34000 },
-    { speaker: "IVR",  text: "ಉಸಿರಾಡಲು ಕಷ್ಟವಾಗುತ್ತಿದೆಯೇ? ಹೌದು ಗೆ 1, ಇಲ್ಲ ಗೆ 2 ಒತ್ತಿರಿ.", delay: 36000 },
-    { speaker: "USER", text: "1 ಒತ್ತಿದರು — ಹೌದು", delay: 41000 },
-    { speaker: "IVR",  text: "ನಿಮ್ಮ ರಿಸ್ಕ್ HIGH. TB ಲಕ್ಷಣಗಳು ಇವೆ. ತಕ್ಷಣ Ramnagar PHC ಗೆ ಹೋಗಿ. SMS ಕಳುಹಿಸಲಾಗಿದೆ. ಧನ್ಯವಾದಗಳು.", delay: 43000 },
-  ],
-  "bn-IN": [
-    { speaker: "IVR",  text: "Aarogya AI তে স্বাগতম। Hindi এর জন্য 1, English এর জন্য 2, Tamil এর জন্য 3, Telugu এর জন্য 4, Kannada এর জন্য 5, Bengali এর জন্য 6 চাপুন।", delay: 1000 },
-    { speaker: "USER", text: "6 চাপলেন — Bengali", delay: 6000 },
-    { speaker: "IVR",  text: "নমস্কার! আপনার ২ সপ্তাহের বেশি কাশি আছে? হ্যাঁ এর জন্য 1, না এর জন্য 2 চাপুন।", delay: 8000 },
-    { speaker: "USER", text: "1 চাপলেন — হ্যাঁ", delay: 13000 },
-    { speaker: "IVR",  text: "রাতে ঘাম হয়? হ্যাঁ এর জন্য 1, না এর জন্য 2 চাপুন।", delay: 15000 },
-    { speaker: "USER", text: "1 চাপলেন — হ্যাঁ", delay: 20000 },
-    { speaker: "IVR",  text: "ওজন কমেছে? হ্যাঁ এর জন্য 1, না এর জন্য 2 চাপুন।", delay: 22000 },
-    { speaker: "USER", text: "1 চাপলেন — হ্যাঁ", delay: 27000 },
-    { speaker: "IVR",  text: "জ্বর আছে? হ্যাঁ এর জন্য 1, না এর জন্য 2 চাপুন।", delay: 29000 },
-    { speaker: "USER", text: "1 চাপলেন — হ্যাঁ", delay: 34000 },
-    { speaker: "IVR",  text: "শ্বাস নিতে কষ্ট হয়? হ্যাঁ এর জন্য 1, না এর জন্য 2 চাপুন।", delay: 36000 },
-    { speaker: "USER", text: "1 চাপলেন — হ্যাঁ", delay: 41000 },
-    { speaker: "IVR",  text: "আপনার ঝুঁকি HIGH। TB লক্ষণ আছে। অবিলম্বে Ramnagar PHC যান। SMS পাঠানো হয়েছে। ধন্যবাদ।", delay: 43000 },
-  ],
+interface SpeechRecognitionEvent {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+const LANGUAGES: { digit: string; code: Language; name: string }[] = [
+  { digit: "1", code: "en-IN", name: "English" },
+  { digit: "2", code: "mr-IN", name: "Marathi" },
+  { digit: "3", code: "hi-IN", name: "Hindi" },
+  { digit: "4", code: "ta-IN", name: "Tamil" },
+  { digit: "5", code: "te-IN", name: "Telugu" },
+  { digit: "6", code: "kn-IN", name: "Kannada" },
+  { digit: "7", code: "bn-IN", name: "Bengali" },
+];
+
+const QUESTIONS: { id: string; label: string; prompt: Record<Language, string> }[] = [
+  {
+    id: "cough",
+    label: "Cough over 2 weeks",
+    prompt: {
+      "en-IN": "Do you have cough for more than two weeks? Press 1 for yes, 2 for no.",
+      "mr-IN": "Tumhala don athavdyan peksha jast khokla aahe ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya aapko do hafte se zyada khansi hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Do weeks se zyada cough hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Do weeks se zyada cough hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Do weeks se zyada cough hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Do weeks se zyada cough hai? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+  {
+    id: "fever",
+    label: "Fever",
+    prompt: {
+      "en-IN": "Have you had fever recently? Press 1 for yes, 2 for no.",
+      "mr-IN": "Tumhala alikade taap ala hota ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya aapko bukhar hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Fever hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Fever hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Fever hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Fever hai? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+  {
+    id: "nightSweats",
+    label: "Night sweats",
+    prompt: {
+      "en-IN": "Do you get night sweats? Press 1 for yes, 2 for no.",
+      "mr-IN": "Tumhala ratri gham yeto ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya raat me pasina aata hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Night sweats aate hain? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Night sweats aate hain? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Night sweats aate hain? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Night sweats aate hain? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+  {
+    id: "weightLoss",
+    label: "Weight loss",
+    prompt: {
+      "en-IN": "Have you lost weight without trying? Press 1 for yes, 2 for no.",
+      "mr-IN": "Tumche wajan karanashivay kami zhale aahe ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya aapka wajan bina wajah kam hua hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Weight bina reason kam hua hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Weight bina reason kam hua hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Weight bina reason kam hua hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Weight bina reason kam hua hai? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+  {
+    id: "breathing",
+    label: "Breathing trouble",
+    prompt: {
+      "en-IN": "Do you have trouble breathing? Press 1 for yes, 2 for no.",
+      "mr-IN": "Tumhala shwas ghenyas tras hoto ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya saans lene me dikkat hoti hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Breathing me difficulty hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Breathing me difficulty hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Breathing me difficulty hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Breathing me difficulty hai? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+  {
+    id: "blood",
+    label: "Blood in sputum",
+    prompt: {
+      "en-IN": "Have you coughed blood or blood stained sputum? Press 1 for yes, 2 for no.",
+      "mr-IN": "Khoklyat rakt ale aahe ka? Ho sathi 1, nahi sathi 2 daba.",
+      "hi-IN": "Kya khansi ke sath khoon aaya hai? Haan ke liye 1, nahi ke liye 2 dabayen.",
+      "ta-IN": "Cough ke sath blood aaya hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "te-IN": "Cough ke sath blood aaya hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "kn-IN": "Cough ke sath blood aaya hai? Yes ke liye 1, no ke liye 2 press karein.",
+      "bn-IN": "Cough ke sath blood aaya hai? Yes ke liye 1, no ke liye 2 press karein.",
+    },
+  },
+];
+
+const languageMenu =
+  "Welcome to Aarogya AI. Press 1 for English. Press 2 for Marathi. Press 3 for Hindi. Press 4 for Tamil. Press 5 for Telugu. Press 6 for Kannada. Press 7 for Bengali.";
+
+const speakPrompt: Record<Language, string> = {
+  "en-IN": "Now describe your symptoms in your own words after the beep.",
+  "mr-IN": "Ata beep nantar tumchi lakshane tumchya bhashayt sanga.",
+  "hi-IN": "Ab beep ke baad apne symptoms apni bhasha me batayen.",
+  "ta-IN": "Beep ke baad apne symptoms apni language me boliye.",
+  "te-IN": "Beep ke baad apne symptoms apni language me boliye.",
+  "kn-IN": "Beep ke baad apne symptoms apni language me boliye.",
+  "bn-IN": "Beep ke baad apne symptoms apni language me boliye.",
 };
 
-const SMS: Record<Language, string> = {
-  "hi-IN": "🏥 AAROGYA AI\nRisk: HIGH - TB\n5/5 symptoms matched\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX\nHelpline: 1800-111-2222",
-  "en-IN": "🏥 AAROGYA AI\nRisk: HIGH - TB\n5/5 symptoms matched\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX\nHelpline: 1800-111-2222",
-  "ta-IN": "🏥 AAROGYA AI\nஆபத்து: HIGH - TB\n5/5 அறிகுறிகள்\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX",
-  "te-IN": "🏥 AAROGYA AI\nరిస్క్: HIGH - TB\n5/5 లక్షణాలు\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX",
-  "kn-IN": "🏥 AAROGYA AI\nರಿಸ್ಕ್: HIGH - TB\n5/5 ಲಕ್ಷಣಗಳು\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX",
-  "bn-IN": "🏥 AAROGYA AI\nঝুঁকি: HIGH - TB\n5/5 লক্ষণ\nPHC: Ramnagar (3.5km)\nABHA: AB-2847-XXXX",
+const smsTemplate: Record<Language, (risk: string, yesCount: number, symptoms: string) => string> = {
+  "en-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nPositive keypad symptoms: ${yesCount}/${QUESTIONS.length}\nSpoken symptoms: ${symptoms}\nNearest PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX\nVisit PHC today if symptoms continue.`,
+  "mr-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad lakshane: ${yesCount}/${QUESTIONS.length}\nBolun sangitleli lakshane: ${symptoms}\nNajikche PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX\nLakshane chalu astil tar aaj PHC la ja.`,
+  "hi-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad symptoms: ${yesCount}/${QUESTIONS.length}\nBole gaye symptoms: ${symptoms}\nNazdiki PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX\nSymptoms continue ho to aaj PHC jayein.`,
+  "ta-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad symptoms: ${yesCount}/${QUESTIONS.length}\nSpoken symptoms: ${symptoms}\nNearest PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX`,
+  "te-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad symptoms: ${yesCount}/${QUESTIONS.length}\nSpoken symptoms: ${symptoms}\nNearest PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX`,
+  "kn-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad symptoms: ${yesCount}/${QUESTIONS.length}\nSpoken symptoms: ${symptoms}\nNearest PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX`,
+  "bn-IN": (risk, yesCount, symptoms) =>
+    `AAROGYA AI\nRisk: ${risk}\nKeypad symptoms: ${yesCount}/${QUESTIONS.length}\nSpoken symptoms: ${symptoms}\nNearest PHC: Ramnagar, 3.5 km\nABHA: AB-2847-XXXX`,
 };
+
+function riskFromAnswers(answers: Record<string, Answer>, spokenSymptoms: string) {
+  const yesCount = Object.values(answers).filter((answer) => answer === "yes").length;
+  const speechBoost = /blood|breath|chest|fever|weight|khansi|khokla|rakt|saans|shwas/i.test(spokenSymptoms) ? 1 : 0;
+  const score = yesCount + speechBoost;
+  if (score >= 5) return "HIGH TB RISK";
+  if (score >= 3) return "MODERATE TB RISK";
+  return "LOW TB RISK";
+}
+
+function getRecognitionLanguage(code: Language) {
+  return code === "en-IN" ? "en-US" : code;
+}
 
 export default function IVRSPage() {
-  const [callState, setCallState]       = useState<CallState>("IDLE");
-  const [selectedLang, setSelectedLang] = useState<Language>("hi-IN");
-  const [transcript, setTranscript]     = useState<{speaker: string, text: string}[]>([]);
-  const [callDuration, setCallDuration] = useState(0);
-  const [isSpeaking, setIsSpeaking]     = useState(false);
-  const [showSMS, setShowSMS]           = useState(false);
-  const [showRisk, setShowRisk]         = useState(false);
-  const [currentTime, setCurrentTime]   = useState("");
-  const [waveActive, setWaveActive]     = useState(false);
+  const [callState, setCallState] = useState<CallState>("IDLE");
+  const [selectedLang, setSelectedLang] = useState<Language>("en-IN");
+  const [languageName, setLanguageName] = useState("English");
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [digits, setDigits] = useState("");
+  const [transcript, setTranscript] = useState<{ from: "IVR" | "USER" | "SYSTEM"; text: string }[]>([]);
+  const [spokenSymptoms, setSpokenSymptoms] = useState("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSource, setVoiceSource] = useState<"Sarvam" | "Browser">("Browser");
+  const [currentTime, setCurrentTime] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  const timeoutsRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
-  const transcriptEnd  = useRef<HTMLDivElement>(null);
-  const audioRef       = useRef<HTMLAudioElement | null>(null);
+  const yesCount = Object.values(answers).filter((answer) => answer === "yes").length;
+  const risk = riskFromAnswers(answers, spokenSymptoms);
+  const sms = useMemo(
+    () => smsTemplate[selectedLang](risk, yesCount, spokenSymptoms || "Not captured"),
+    [risk, selectedLang, spokenSymptoms, yesCount]
+  );
 
-  // Clock
   useEffect(() => {
-    const tick = () => setCurrentTime(
-      new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-    );
+    const tick = () => setCurrentTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Call timer
   useEffect(() => {
-    if (callState === "CONNECTED") {
-      timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [callState]);
-
-  // Auto scroll
-  useEffect(() => {
-    transcriptEnd.current?.scrollIntoView({ behavior: "smooth" });
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
-  const fmt = (s: number) =>
-    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+  function addLine(from: "IVR" | "USER" | "SYSTEM", text: string) {
+    setTranscript((prev) => [...prev, { from, text }]);
+  }
 
-  const speak = async (text: string, lang: Language) => {
+  function stopAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  }
+
+  async function speak(text: string, lang: Language) {
+    stopAudio();
     setIsSpeaking(true);
-    setWaveActive(true);
-
     try {
-      const res = await fetch("/api/sarvam", {
+      const response = await fetch("/api/sarvam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, target_language_code: lang }),
       });
-      const data = await res.json();
-
+      const data = await response.json();
       if (data.audio) {
+        setVoiceSource("Sarvam");
         const audio = new Audio(data.audio);
         audioRef.current = audio;
-        audio.onended = () => { setIsSpeaking(false); setWaveActive(false); };
+        audio.onended = () => setIsSpeaking(false);
         audio.onerror = () => browserSpeak(text, lang);
         await audio.play();
         return;
       }
     } catch {
-      // fall through to browser TTS
+      // Use browser voice if Sarvam is unavailable in local demo mode.
+    }
+    browserSpeak(text, lang);
+  }
+
+  function browserSpeak(text: string, lang: Language) {
+    setVoiceSource("Browser");
+    if (!("speechSynthesis" in window)) {
+      setIsSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 0.82;
+    utterance.onend = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function startCall() {
+    stopAudio();
+    setCallState("MENU");
+    setQuestionIndex(0);
+    setAnswers({});
+    setDigits("");
+    setSpokenSymptoms("");
+    setTranscript([]);
+    addLine("IVR", languageMenu);
+    void speak(languageMenu, "en-IN");
+  }
+
+  function pressDigit(digit: string) {
+    if (callState === "MENU") {
+      const chosen = LANGUAGES.find((language) => language.digit === digit);
+      if (!chosen) {
+        addLine("SYSTEM", "Invalid option. Please choose a language from 1 to 7.");
+        void speak("Invalid option. Please choose a language from 1 to 7.", "en-IN");
+        return;
+      }
+      setDigits(digit);
+      setSelectedLang(chosen.code);
+      setLanguageName(chosen.name);
+      setCallState("QUESTIONS");
+      addLine("USER", `Pressed ${digit} for ${chosen.name}`);
+      addLine("IVR", QUESTIONS[0].prompt[chosen.code]);
+      void speak(QUESTIONS[0].prompt[chosen.code], chosen.code);
+      return;
     }
 
-    browserSpeak(text, lang);
-  };
+    setDigits((prev) => `${prev}${digit}`);
 
-  const browserSpeak = (text: string, lang: Language) => {
-    if (!("speechSynthesis" in window)) { setIsSpeaking(false); setWaveActive(false); return; }
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang  = lang;
-    u.rate  = 0.85;
-    u.pitch = 1;
-    u.onstart = () => { setIsSpeaking(true); setWaveActive(true); };
-    u.onend   = () => { setIsSpeaking(false); setWaveActive(false); };
-    window.speechSynthesis.speak(u);
-  };
+    if (callState === "QUESTIONS") {
+      if (digit !== "1" && digit !== "2") {
+        addLine("SYSTEM", "Please press 1 for yes or 2 for no.");
+        void speak("Please press 1 for yes or 2 for no.", selectedLang);
+        return;
+      }
+      const answer: Answer = digit === "1" ? "yes" : "no";
+      const question = QUESTIONS[questionIndex];
+      const nextAnswers = { ...answers, [question.id]: answer };
+      setAnswers(nextAnswers);
+      addLine("USER", `Pressed ${digit}: ${answer === "yes" ? "Yes" : "No"}`);
 
-  const startCall = () => {
-    setCallState("CALLING");
-    setTranscript([]);
-    setShowSMS(false);
-    setShowRisk(false);
-    setCallDuration(0);
+      const nextIndex = questionIndex + 1;
+      if (nextIndex >= QUESTIONS.length) {
+        setCallState("SPEAK");
+        setQuestionIndex(nextIndex);
+        addLine("IVR", speakPrompt[selectedLang]);
+        void speak(speakPrompt[selectedLang], selectedLang);
+        return;
+      }
 
-    const t = setTimeout(() => {
-      setCallState("CONNECTED");
-      runScript();
-    }, 2500);
-    timeoutsRef.current.push(t);
-  };
+      setQuestionIndex(nextIndex);
+      addLine("IVR", QUESTIONS[nextIndex].prompt[selectedLang]);
+      void speak(QUESTIONS[nextIndex].prompt[selectedLang], selectedLang);
+    }
+  }
 
-  const runScript = () => {
-    const steps = SCRIPTS[selectedLang];
-    const lastDelay = steps[steps.length - 1].delay;
+  function backspaceDigit() {
+    setDigits((prev) => prev.slice(0, -1));
+  }
 
-    steps.forEach(step => {
-      const t = setTimeout(() => {
-        setTranscript(prev => [...prev, { speaker: step.speaker, text: step.text }]);
-        if (step.speaker === "IVR") speak(step.text, selectedLang);
-      }, step.delay);
-      timeoutsRef.current.push(t);
-    });
+  function listenForSymptoms() {
+    const Recognition =
+      (window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor })
+        .SpeechRecognition ||
+      (window as typeof window & { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor })
+        .webkitSpeechRecognition;
 
-    // End call after last message
-    const endT = setTimeout(() => {
-      window.speechSynthesis?.cancel();
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-      setCallState("ENDED");
-      setShowRisk(true);
-      setTimeout(() => setShowSMS(true), 1500);
-    }, lastDelay + 6000);
-    timeoutsRef.current.push(endT);
-  };
+    if (!Recognition) {
+      addLine("SYSTEM", "Speech input is not available in this browser. Type a short symptom note instead.");
+      return;
+    }
 
-  const endCall = () => {
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
-    setWaveActive(false);
+    stopAudio();
+    const recognition = new Recognition();
+    recognition.lang = getRecognitionLanguage(selectedLang);
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const text = event.results[0]?.[0]?.transcript ?? "";
+      setSpokenSymptoms(text);
+      addLine("USER", text || "No speech captured");
+      finishCall(text);
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      addLine("SYSTEM", "Could not hear clearly. Please try again.");
+    };
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  }
+
+  function finishCall(symptoms = spokenSymptoms) {
+    recognitionRef.current?.abort();
+    setIsListening(false);
+    setSpokenSymptoms(symptoms);
     setCallState("ENDED");
-    setShowRisk(true);
-    setTimeout(() => setShowSMS(true), 1000);
-  };
+    const closing =
+      selectedLang === "mr-IN"
+        ? "Screening purna zali. Tumhala SMS tumchya bhashayt milala aahe."
+        : selectedLang === "hi-IN"
+          ? "Screening poori hui. Aapko SMS aapki bhasha me mil gaya hai."
+          : "Screening complete. You have received the SMS in your selected language.";
+    addLine("IVR", closing);
+    void speak(closing, selectedLang);
+  }
 
-  const reset = () => {
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    window.speechSynthesis?.cancel();
+  function reset() {
+    recognitionRef.current?.abort();
+    stopAudio();
     setCallState("IDLE");
+    setSelectedLang("en-IN");
+    setLanguageName("English");
+    setQuestionIndex(0);
+    setAnswers({});
+    setDigits("");
     setTranscript([]);
-    setShowSMS(false);
-    setShowRisk(false);
-    setCallDuration(0);
-    setIsSpeaking(false);
-    setWaveActive(false);
-  };
+    setSpokenSymptoms("");
+    setIsListening(false);
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] flex flex-col font-sans overflow-y-auto">
-
-      {/* Page Header */}
-      <header className="bg-slate-900/50 border-b border-white/5 py-8 px-6 text-center">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <PhoneCall className="w-8 h-8 text-green-400" />
-          <h1 className="text-3xl font-bold text-white tracking-tight">Live IVRS Simulation</h1>
-        </div>
-        <p className="text-slate-400 text-lg">Interactive Voice Response System</p>
-        <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
-          Works on any basic keypad phone · No internet required · 6 Indian languages
-        </p>
-      </header>
-
-      {/* Language Selector - Only show when IDLE */}
-      {callState === "IDLE" && (
-        <div className="flex flex-col items-center py-8 bg-slate-900/30 border-b border-white/5">
-          <p className="text-sm font-semibold text-slate-400 mb-4 uppercase tracking-widest">Select Demo Language</p>
-          <div className="flex flex-wrap justify-center gap-3 max-w-2xl px-4">
-            {LANG_OPTIONS.map(l => (
-              <button
-                key={l.code}
-                onClick={() => setSelectedLang(l.code)}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all border ${
-                  selectedLang === l.code
-                    ? "bg-green-500 border-green-400 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)] scale-105"
-                    : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20"
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main Layout: Phone + Info */}
-      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 p-8 lg:p-12">
-
-        {/* ── PHONE MOCKUP ── */}
-        <div className="relative">
-          {/* Glow effect */}
-          <div className="absolute inset-0 bg-green-500/20 blur-[100px] rounded-full pointer-events-none" />
-
-          {/* Phone body */}
-          <div className="relative w-[340px] h-[720px] bg-black rounded-[50px] border-[12px] border-slate-800 shadow-2xl flex flex-col overflow-hidden z-10">
-            {/* Side buttons */}
-            <div className="absolute -left-[14px] top-24 w-1 h-12 bg-slate-700 rounded-l-md" />
-            <div className="absolute -left-[14px] top-40 w-1 h-12 bg-slate-700 rounded-l-md" />
-            <div className="absolute -right-[14px] top-32 w-1 h-16 bg-slate-700 rounded-r-md" />
-
-            {/* Dynamic Island */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-full z-30 flex items-center justify-between px-3">
-              {callState === "CONNECTED" && (
-                <>
-                  <div className="text-[10px] text-green-400 font-medium tracking-wider">{fmt(callDuration)}</div>
-                  {isSpeaking && <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
-                </>
-              )}
+    <main className="min-h-screen bg-[#101820] px-4 py-6 text-white">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[380px_1fr]">
+        <section className="overflow-hidden rounded-[32px] border-[10px] border-slate-800 bg-black shadow-2xl">
+          <div className="flex items-center justify-between px-6 py-4 text-xs text-slate-200">
+            <span>{currentTime}</span>
+            <div className="flex items-center gap-1.5">
+              <Signal className="h-3.5 w-3.5" />
+              <Wifi className="h-3.5 w-3.5" />
+              <Battery className="h-4 w-4" />
             </div>
+          </div>
 
-            {/* Status bar */}
-            <div className="flex justify-between items-center px-6 pt-4 pb-2 text-white text-xs font-medium z-20">
-              <span>{currentTime}</span>
-              <div className="flex items-center gap-1.5 text-slate-200">
-                <Signal className="w-3.5 h-3.5" />
-                <Wifi className="w-3.5 h-3.5" />
-                <Battery className="w-4 h-4" />
+          <div className="min-h-[700px] bg-slate-950">
+            <div className="border-b border-white/10 bg-slate-900 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">Aarogya AI IVRS</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {callState === "IDLE" ? "Ready" : `${languageName} · ${voiceSource} voice`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSpeaking && <Volume2 className="h-5 w-5 text-emerald-300" />}
+                  {isListening && <Mic className="h-5 w-5 text-red-300" />}
+                </div>
               </div>
             </div>
 
-            {/* ── IDLE SCREEN ── */}
-            {callState === "IDLE" && (
-              <div className="flex-1 flex flex-col items-center justify-center bg-slate-900 p-6 animate-in fade-in">
-                <div className="text-center mb-12">
-                  <p className="text-slate-400 text-xs font-bold tracking-widest uppercase mb-4">Toll-Free · No charge</p>
-                  <h2 className="text-4xl font-light text-white tracking-widest mb-2">1800-111-2222</h2>
-                  <p className="text-green-400 text-sm font-medium">
-                    {LANG_OPTIONS.find(l => l.code === selectedLang)?.label} selected
+            {callState === "IDLE" ? (
+              <div className="flex min-h-[620px] flex-col items-center justify-center px-6 text-center">
+                <div className="mb-7 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500">
+                  <PhoneCall className="h-10 w-10" />
+                </div>
+                <h1 className="text-3xl font-semibold">IVRS call demo</h1>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Starts exactly like a phone call: press 1 for English, press 2 for Marathi, and continue by keypad.
+                </p>
+                <button
+                  onClick={startCall}
+                  className="mt-10 flex w-full items-center justify-center gap-3 rounded-md bg-emerald-500 px-5 py-4 font-semibold text-white hover:bg-emerald-400"
+                >
+                  <Phone className="h-5 w-5" />
+                  Start call
+                </button>
+              </div>
+            ) : callState === "ENDED" ? (
+              <div className="flex min-h-[620px] flex-col gap-4 p-5">
+                <div className="rounded-md border border-emerald-500/25 bg-emerald-500/10 p-4">
+                  <p className="text-xs uppercase tracking-wider text-slate-300">Final result</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-300">{risk}</p>
+                  <p className="mt-2 text-sm text-slate-200">
+                    {yesCount} of {QUESTIONS.length} keypad answers were yes.
                   </p>
                 </div>
 
-                {/* Contact avatar */}
-                <div className="flex flex-col items-center mb-16">
-                  <div className="w-24 h-24 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-4xl mb-4 shadow-xl">
-                    🏥
-                  </div>
-                  <h3 className="text-xl font-medium text-white">Aarogya AI</h3>
-                  <p className="text-slate-400 text-sm">Health Assistant</p>
+                <div className="rounded-md border border-white/10 bg-slate-800 p-4">
+                  <p className="mb-3 text-sm font-bold">SMS received by user</p>
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-100">{sms}</p>
                 </div>
 
-                {/* Call button */}
                 <button
-                  onClick={startCall}
-                  className="group flex flex-col items-center gap-3 transition-transform active:scale-95"
+                  onClick={reset}
+                  className="mt-auto flex items-center justify-center gap-2 rounded-md bg-white/10 px-4 py-3 font-semibold hover:bg-white/15"
                 >
-                  <div className="w-20 h-20 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center shadow-[0_0_30px_rgba(34,197,94,0.3)] group-hover:shadow-[0_0_40px_rgba(34,197,94,0.5)] transition-all">
-                    <Phone className="w-8 h-8 text-white fill-current" />
-                  </div>
-                  <span className="text-slate-400 text-xs font-medium uppercase tracking-widest">Tap to call</span>
+                  <RotateCcw className="h-4 w-4" />
+                  Test again
                 </button>
               </div>
-            )}
-
-            {/* ── CALLING SCREEN ── */}
-            {callState === "CALLING" && (
-              <div className="flex-1 flex flex-col items-center bg-slate-900 p-6 animate-in fade-in relative overflow-hidden">
-                <div className="mt-16 text-center z-10">
-                  <h2 className="text-3xl font-light text-white mb-2">Calling...</h2>
-                  <p className="text-slate-400">Aarogya AI Helpline</p>
-                </div>
-
-                {/* Pulsing avatar */}
-                <div className="relative mt-24 z-10 flex items-center justify-center">
-                  <div className="absolute w-64 h-64 bg-green-500/10 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-                  <div className="absolute w-48 h-48 bg-green-500/20 rounded-full animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
-                  <div className="w-32 h-32 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-5xl z-20 shadow-2xl">
-                    🏥
-                  </div>
-                </div>
-
-                <div className="absolute bottom-16 w-full flex justify-center z-10">
-                  <button
-                    onClick={endCall}
-                    className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center shadow-lg transition-transform active:scale-95"
-                  >
-                    <PhoneOff className="w-8 h-8 text-white" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── CONNECTED SCREEN ── */}
-            {callState === "CONNECTED" && (
-              <div className="flex-1 flex flex-col bg-slate-950 animate-in fade-in">
-                {/* Call info bar */}
-                <div className="px-5 py-4 bg-slate-900 border-b border-white/10 flex justify-between items-center z-10 shadow-md">
-                  <div>
-                    <h3 className="text-white font-medium">Aarogya AI</h3>
-                    <p className="text-green-400 text-xs font-medium flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                      Connected · {fmt(callDuration)}
-                    </p>
-                  </div>
-                  {isSpeaking && (
-                    <div className="flex items-center gap-1">
-                      {[1,2,3,4,3,2,1].map((h, i) => (
-                        <div key={i} className="w-1 bg-green-400 rounded-full animate-pulse" style={{ height: `${h * 4}px`, animationDelay: `${i * 0.1}s` }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Transcript */}
-                <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-950 custom-scrollbar">
-                  {transcript.length === 0 && (
-                    <div className="flex justify-center py-10">
-                      <p className="text-slate-500 text-sm">Connecting...</p>
-                    </div>
-                  )}
-                  {transcript.map((line, i) => (
-                    <div key={i} className={`flex ${line.speaker === "USER" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed shadow-sm ${
-                        line.speaker === "IVR"
-                          ? "bg-slate-800 text-slate-200 rounded-tl-sm border border-white/5"
-                          : "bg-green-600 text-white rounded-tr-sm"
-                      }`}>
-                        {line.speaker === "IVR" && (
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                            🤖 Aarogya AI
-                          </div>
-                        )}
+            ) : (
+              <div className="flex min-h-[620px] flex-col">
+                <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                  {transcript.map((line, index) => (
+                    <div key={`${line.from}-${index}`} className={`flex ${line.from === "USER" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[86%] rounded-lg px-3 py-2 text-sm leading-6 ${
+                          line.from === "USER"
+                            ? "bg-emerald-500 text-white"
+                            : line.from === "SYSTEM"
+                              ? "bg-amber-500/15 text-amber-100"
+                              : "bg-slate-800 text-slate-100"
+                        }`}
+                      >
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider opacity-70">{line.from}</p>
                         {line.text}
                       </div>
                     </div>
                   ))}
-                  <div ref={transcriptEnd} />
+                  <div ref={transcriptEndRef} />
                 </div>
 
-                {/* End call */}
-                <div className="p-6 bg-slate-900 border-t border-white/5 flex justify-center z-10">
-                  <button
-                    onClick={endCall}
-                    className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center shadow-lg transition-transform active:scale-95"
-                  >
-                    <PhoneOff className="w-6 h-6 text-white" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── ENDED SCREEN ── */}
-            {callState === "ENDED" && (
-              <div className="flex-1 flex flex-col bg-slate-950 p-5 overflow-y-auto custom-scrollbar animate-in fade-in">
-                <div className="text-center py-4 border-b border-white/10 mb-5">
-                  <p className="text-slate-400 text-sm">Call ended · {fmt(callDuration)}</p>
-                </div>
-
-                {/* Risk Result */}
-                {showRisk && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 animate-in slide-in-from-bottom-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-red-400 text-sm">🔴 Risk Assessment</span>
-                    </div>
-                    <h3 className="text-red-500 font-bold text-xl tracking-tight">HIGH RISK</h3>
-                    <p className="text-white font-medium text-lg mb-1">TB (Tuberculosis)</p>
-                    <div className="bg-black/20 rounded-lg p-2 mb-3">
-                      <p className="text-slate-300 text-xs flex items-center gap-2">
-                        <span className="text-red-400">⚠</span> 5 out of 5 major symptoms matched
-                      </p>
-                    </div>
-                    <p className="text-slate-400 text-xs bg-slate-900 rounded-lg p-2 border border-white/5 inline-flex items-center gap-2">
-                      📍 Nearest PHC: Ramnagar · 3.5 km
-                    </p>
+                {callState === "SPEAK" && (
+                  <div className="border-t border-white/10 bg-slate-900 p-4">
+                    <button
+                      onClick={listenForSymptoms}
+                      className={`mb-3 flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 font-semibold ${
+                        isListening ? "bg-red-500" : "bg-sky-500 hover:bg-sky-400"
+                      }`}
+                    >
+                      <Mic className="h-5 w-5" />
+                      {isListening ? "Listening..." : "Speak symptoms"}
+                    </button>
+                    <textarea
+                      value={spokenSymptoms}
+                      onChange={(event) => setSpokenSymptoms(event.target.value)}
+                      placeholder="Or type what the user said..."
+                      className="h-20 w-full resize-none rounded-md border border-white/10 bg-slate-950 p-3 text-sm text-white outline-none"
+                    />
+                    <button
+                      onClick={() => finishCall()}
+                      className="mt-3 w-full rounded-md bg-emerald-500 px-4 py-3 font-semibold text-white hover:bg-emerald-400"
+                    >
+                      Generate SMS
+                    </button>
                   </div>
                 )}
 
-                {/* SMS */}
-                {showSMS && (
-                  <div className="bg-slate-800/80 rounded-2xl p-4 mb-4 border border-white/10 shadow-lg animate-in slide-in-from-bottom-4" style={{ animationDelay: '150ms' }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                        A
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white text-sm font-bold leading-none">AAROGYA</p>
-                        <p className="text-slate-400 text-[10px] mt-1">SMS · now</p>
-                      </div>
+                {callState !== "SPEAK" && (
+                  <div className="border-t border-white/10 bg-slate-900 p-4">
+                    <div className="mb-3 rounded-md bg-slate-950 px-4 py-3 text-right font-mono text-xl">{digits || " "}</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].map((digit) => (
+                        <button
+                          key={digit}
+                          onClick={() => pressDigit(digit)}
+                          className="rounded-md bg-slate-700 py-4 text-xl font-semibold hover:bg-slate-600"
+                        >
+                          {digit}
+                        </button>
+                      ))}
                     </div>
-                    <p className="text-slate-200 text-[13px] leading-relaxed whitespace-pre-wrap font-medium">
-                      {SMS[selectedLang]}
-                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={backspaceDigit} className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white/10 py-3 hover:bg-white/15">
+                        <Delete className="h-4 w-4" />
+                        Delete
+                      </button>
+                      <button onClick={reset} className="flex flex-1 items-center justify-center gap-2 rounded-md bg-red-500 py-3 hover:bg-red-400">
+                        <PhoneOff className="h-4 w-4" />
+                        End
+                      </button>
+                    </div>
                   </div>
                 )}
-
-                {/* ABHA */}
-                {showSMS && (
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center animate-in slide-in-from-bottom-4" style={{ animationDelay: '300ms' }}>
-                    <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-1">🆔 ABHA ID Generated</p>
-                    <p className="text-white font-mono text-lg font-bold tracking-wider">AB-2847-XXXX-YYYY</p>
-                    <p className="text-slate-400 text-[10px] mt-1">Linked to Ayushman Bharat</p>
-                  </div>
-                )}
-
-                <div className="mt-8 mb-4 flex justify-center">
-                  <button onClick={reset} className="px-6 py-2 rounded-full bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors">
-                    ↩ Call Again
-                  </button>
-                </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* ── RIGHT SIDE INFO ── */}
-        <div className="max-w-md w-full flex flex-col gap-6">
-
-          {/* How it works */}
-          <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-            <h3 className="text-white font-bold text-xl mb-6 flex items-center gap-3">
-              <span className="w-2 h-6 bg-green-500 rounded-full"></span>
-              How IVRS Works
-            </h3>
-            <div className="space-y-6">
+        <section className="grid content-start gap-5">
+          <div className="rounded-md border border-white/10 bg-[#17212b] p-6">
+            <h2 className="text-2xl font-semibold">Required call flow</h2>
+            <div className="mt-5 grid gap-3">
               {[
-                { step: "1", text: "Farmer calls 1800-111-2222 (free)", icon: "📞" },
-                { step: "2", text: "Selects language by pressing number", icon: "🔢" },
-                { step: "3", text: "AI asks 5 health questions via voice", icon: "🎙️" },
-                { step: "4", text: "Risk score calculated instantly", icon: "🧠" },
-                { step: "5", text: "SMS sent with PHC location & ABHA ID", icon: "📱" },
-              ].map(s => (
-                <div key={s.step} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-lg shrink-0">
-                    {s.icon}
-                  </div>
-                  <p className="text-slate-300 font-medium">{s.text}</p>
+                "1. IVRS asks: press 1 for English, press 2 for Marathi, and so on.",
+                "2. User selects language using phone keypad.",
+                "3. IVRS asks screening questions. User answers with keypad: 1 yes, 2 no.",
+                "4. IVRS asks user to speak symptoms freely in the selected language.",
+                "5. User receives SMS preview in the selected language.",
+              ].map((line) => (
+                <div key={line} className="rounded-md bg-white/5 p-4 text-sm leading-6 text-slate-200">
+                  {line}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { icon: "📞", value: "Free",    label: "Toll-free call" },
-              { icon: "🌐", value: "6",       label: "Languages" },
-              { icon: "⚡", value: "< 3 min", label: "Screening time" },
-              { icon: "📱", value: "Any",     label: "Basic phone" },
-            ].map(s => (
-              <div key={s.label} className="bg-slate-900/50 border border-white/5 rounded-2xl p-5 backdrop-blur-sm">
-                <span className="text-2xl block mb-2">{s.icon}</span>
-                <p className="text-white font-bold text-lg leading-none mb-1">{s.value}</p>
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Current language indicator */}
-          {callState !== "IDLE" && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5 flex items-center gap-4 animate-in fade-in">
-              <div className="text-3xl">🎙️</div>
-              <div>
-                <p className="text-green-400 font-bold">
-                  {LANG_OPTIONS.find(l => l.code === selectedLang)?.name} Demo
-                </p>
-                <p className="text-slate-300 text-sm mt-0.5">
-                  {callState === "CONNECTED" ? "Call in progress..." :
-                   callState === "CALLING"   ? "Connecting..." :
-                   callState === "ENDED"     ? "Demo complete" : ""}
-                </p>
-              </div>
+          <div className="rounded-md border border-white/10 bg-[#17212b] p-6">
+            <h2 className="text-2xl font-semibold">Live answer summary</h2>
+            <div className="mt-4 grid gap-2">
+              {QUESTIONS.map((question) => (
+                <div key={question.id} className="flex justify-between rounded-md bg-white/5 px-3 py-2 text-sm">
+                  <span className="text-slate-300">{question.label}</span>
+                  <span className="font-semibold">{answers[question.id] ?? "pending"}</span>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

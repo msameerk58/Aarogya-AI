@@ -25,11 +25,13 @@ Be culturally sensitive. Never diagnose definitively, but guide them to the near
     { role: "user" as const, content: lastUserMessage?.content || "Hello" }
   ];
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: formattedMessages,
-    temperature: 0.7,
-    response_format: {
+  const response = await openai.chat.completions.create(
+    {
+      model: "gpt-4o-mini",
+      messages: formattedMessages,
+      temperature: 0.7,
+      max_tokens: 1024,
+      response_format: {
       type: "json_schema",
       json_schema: {
         name: "health_response",
@@ -66,7 +68,9 @@ Be culturally sensitive. Never diagnose definitively, but guide them to the near
         }
       }
     }
-  });
+    },
+    { timeout: 30000 }
+  );
 
   const text = response.choices[0].message.content;
   if (!text) throw new Error("Empty response from OpenAI");

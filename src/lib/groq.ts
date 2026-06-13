@@ -21,12 +21,17 @@ CRITICAL LANGUAGE RULE: You MUST detect the language of the user's message and r
 - NEVER mix languages in a single response
 - The detected language for this session is: ${language}
 
+<<<<<<< HEAD
 Ask one clear symptom question at a time. Keep conversation natural and brief.
 Be culturally sensitive. NEVER give a direct or hasty definitive diagnosis, especially for Tuberculosis (TB) or Diabetes.
 Instead, give hope to the user. Explain that you are simply checking their symptoms against medical data/ICMR datasets.
 If symptoms match a disease, soften the language: 'Your symptoms match some signs of [Disease] based on our data. Please do not worry, this is an initial assessment.'
 If symptoms do NOT match the dataset, say: 'Your symptoms don't perfectly match our specific disease datasets. Please don't worry, but if you feel unwell, please contact a doctor.'
 Always recommend visiting a doctor or the nearest PHC for persistent symptoms.
+=======
+Ask one clear symptom question at a time. Keep conversation natural, brief, and extremely empathetic.
+Be culturally sensitive and careful not to disturb the patient's mentality or cause panic. Never diagnose definitively. Always calmly recommend visiting the nearest PHC for serious symptoms without alarming them.
+>>>>>>> aa91452eb8cf6d00630362f0dc35fb855db8af93
 
 ${ICMR_GUIDELINES}
 
@@ -35,24 +40,24 @@ ${ICMR_GUIDELINES}
 CRITICAL OUTPUT FORMAT INSTRUCTIONS:
 You MUST ALWAYS return a valid JSON object. No other text outside the JSON.
 
-If you are still gathering symptoms (fewer than 3 messages from user), return:
+If you are still gathering symptoms (fewer than 5 messages from user OR fewer than 3 confirmed symptoms), return:
 {
-  "content": "Your conversational response asking the next question",
+  "content": "Your conversational response. IMPORTANT: Be reassuring, calm, and empathetic. Do NOT cause panic. Acknowledge their symptom and ask about DURATION or SEVERITY. Ask follow-up questions like: How long have you felt this way? How severe is it? Any other symptoms?",
   "detectedLanguage": "Language name e.g. Hindi or English",
   "riskScores": null,
   "report": null
 }
 
-Once you have gathered enough symptoms (3+ exchanges OR if user mentions severe symptoms like chest pain, high fever >3 days, cough >2 weeks, blood in sputum), return the FULL report:
+Once you have gathered enough symptoms (minimum 5 exchanges with the user AND at least 3 different symptoms confirmed), return the FULL report. NEVER return riskScores on the first few messages, even if symptoms sound severe — always calmly ask at least 4-5 follow-up questions first:
 {
   "content": "Your closing message recommending they visit a PHC based on the findings",
   "detectedLanguage": "Language name",
   "riskScores": [
     {
-      "disease": "Disease Name (e.g. Tuberculosis)",
+      "disease": "[Insert Exact Disease Name From Guidelines]",
       "probability": 85,
       "level": "HIGH",
-      "reasons": ["Cough > 2 weeks", "Evening fever", "Weight loss"]
+      "reasons": ["List exactly the symptoms the user mentioned"]
     }
   ],
   "report": {
@@ -62,15 +67,13 @@ Once you have gathered enough symptoms (3+ exchanges OR if user mentions severe 
       "Do NOT self-medicate with antibiotics"
     ],
     "requiredTests": [
-      { "test": "Sputum Smear Microscopy", "reason": "To confirm TB diagnosis", "cost": "Free under NTEP" },
-      { "test": "Chest X-Ray", "reason": "To check lung infection", "cost": "Free at PHC" }
+      { "test": "[Name of recommended test]", "reason": "[Why it is needed]", "cost": "[Cost info]" }
     ],
     "prescriptionGuidance": [
-      { "medication": "Paracetamol 500mg", "dosage": "1 tablet every 6 hours if fever", "notes": "Only for fever relief, NOT a cure" }
+      { "medication": "[Paracetamol or ORS etc.]", "dosage": "[Dosage]", "notes": "[Only for relief, NOT a cure]" }
     ],
     "governmentSchemes": [
-      { "scheme": "NTEP (National TB Elimination Programme)", "benefit": "Free diagnosis and treatment for Tuberculosis", "contact": "Call 1800-11-6666" },
-      { "scheme": "PM-JAY (Ayushman Bharat)", "benefit": "Health insurance up to ₹5 lakhs/year", "contact": "Call 14555" }
+      { "scheme": "[Applicable Scheme Name]", "benefit": "[Benefit description]", "contact": "[Helpline number]" }
     ],
     "phcContact": {
       "instructions": "Visit your nearest Primary Health Centre. Carry your Aadhaar card. Services are FREE.",
@@ -78,11 +81,12 @@ Once you have gathered enough symptoms (3+ exchanges OR if user mentions severe 
       "emergencyNumber": "108"
     },
     "doNotDo": [
-      "Do NOT stop medication midway if TB is confirmed",
-      "Do NOT take Aspirin or Ibuprofen for Dengue fever"
+      "List actions the patient should avoid"
     ]
   }
-}`;
+}
+
+CRITICAL TRANSLATION RULE: The entire JSON object (all string values inside "content", "summary", "immediateActions", "reasons", "tests", "doNotDo", etc.) MUST be completely translated into ${language}. Only JSON keys, "level" (HIGH/MEDIUM/LOW), and technical disease names can stay in English if necessary.`;
 
   const chatHistory = messages.slice(0, -1).filter(m => m.role !== 'system');
   const lastUserMessage = messages[messages.length - 1];
@@ -107,29 +111,21 @@ Once you have gathered enough symptoms (3+ exchanges OR if user mentions severe 
     });
     text = response.choices[0].message.content;
   } catch (err) {
-    console.error("Groq API error:", err);
+    // Groq API error - return null to fallback to dataset engine
   }
 
   if (text) {
     try {
-      return JSON.parse(text);
-    } catch (err) {
-      console.error("Groq JSON parse error:", err, text);
+      const parsed = JSON.parse(text);
+      // Validate parsed object has expected structure
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    } catch {
+      // JSON parse error - return null to fallback
     }
   }
 
-  // Graceful fallback — never throw, always return a valid response
-  const fallbacks: Record<string, string> = {
-    Hindi: "मैं अभी आपकी बात समझ रहा हूं। कृपया अपने लक्षण बताएं — जैसे बुखार, खांसी, या दर्द?",
-    Kannada: "ನಾನು ಈಗ ಸಂಪರ್ಕಿಸುತ್ತಿದ್ದೇನೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಲಕ್ಷಣಗಳನ್ನು ತಿಳಿಸಿ.",
-    Tamil: "நான் இப்போது இணைக்கிறேன். உங்கள் அறிகுறிகளை சொல்லுங்கள்.",
-    Telugu: "నేను ఇప్పుడు కనెక్ట్ అవుతున్నాను. మీ లక్షణాలు చెప్పండి.",
-    English: "Please describe your symptoms — such as fever, cough, or pain — and I'll help you right away.",
-  };
-  return {
-    content: fallbacks[language] || fallbacks.English,
-    detectedLanguage: language,
-    riskScores: null,
-    report: null,
-  };
+  // Groq failed or returned unparseable response — return null so caller uses dataset engine
+  return null;
 }

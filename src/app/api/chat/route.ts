@@ -20,30 +20,28 @@ export async function POST(req: Request) {
     );
 
     // ── STEP 2: Try Groq for natural conversational text ──────────────────────
-    // Only use Groq for the chat content (follow-up questions / closing message)
-    // Risk scores, report, tests, schemes always come from the dataset engine
-    let finalContent      = datasetResult.content;
-    let detectedLanguage  = datasetResult.detectedLanguage;
+    const detectedLanguage = datasetResult.detectedLanguage;
+
+    // Gate: only allow risk scores after enough user messages
+    const userMessageCount = messages.filter((m: { role: string }) => m.role === "user").length;
+    const allowReport = userMessageCount >= 3;
+
+    let finalContent = datasetResult.content;
 
     try {
       const groqResult = await generateChatResponse(messages, language || "English");
 
-      // Use Groq's conversational content if valid, but keep dataset risk scores
-      if (groqResult?.content && typeof groqResult.content === "string") {
+      // Use Groq's natural conversational text when NOT yet showing a report
+      if (groqResult?.content && !allowReport) {
         finalContent = groqResult.content;
       }
-      if (groqResult?.detectedLanguage) {
-        detectedLanguage = groqResult.detectedLanguage;
-      }
 
-      // If Groq also returned risk scores, merge: dataset scores take priority
-      // but use Groq scores as supplement if dataset found nothing
-      if (!datasetResult.riskScores && groqResult?.riskScores) {
+      // Merge Groq risk scores only if dataset found nothing and report is allowed
+      if (allowReport && !datasetResult.riskScores && groqResult?.riskScores) {
         datasetResult.riskScores = groqResult.riskScores;
         datasetResult.report     = groqResult.report;
       }
     } catch (groqErr) {
-      // Groq failed — silently fall back to dataset content (already set above)
       console.warn("Groq unavailable, using dataset engine response:", groqErr);
     }
 
@@ -51,9 +49,9 @@ export async function POST(req: Request) {
       role:             "model",
       content:          finalContent,
       detectedLanguage: detectedLanguage,
-      isSummary:        !!datasetResult.riskScores,
-      riskScores:       datasetResult.riskScores,   // always from dataset
-      report:           datasetResult.report,        // always from dataset
+      isSummary:        allowReport && !!datasetResult.riskScores,
+      riskScores:       allowReport ? datasetResult.riskScores : null,
+      report:           allowReport ? datasetResult.report : null,
     });
 
   } catch (error) {

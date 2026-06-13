@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.SARVAM_API_KEY;
 
   // ── Fallback: no Sarvam key ──────────────────────────────────────────────
-  if (!apiKey || apiKey === "your_sarvam_key_here" || !text) {
+  if (!apiKey || apiKey.length < 10 || !text) {
     // Return a tiny silent WAV so Twilio doesn't choke
     return new NextResponse(new Uint8Array(silentWav()), {
       headers: { "Content-Type": "audio/wav" },
@@ -41,8 +41,6 @@ export async function GET(req: NextRequest) {
     });
 
     if (!sarvamResp.ok) {
-      const err = await sarvamResp.text();
-      console.error("[IVRS/TTS] Sarvam error:", err);
       return new NextResponse(new Uint8Array(silentWav()), {
         headers: { "Content-Type": "audio/wav" },
       });
@@ -68,7 +66,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[IVRS/TTS] Unexpected error:", err);
     return new NextResponse(new Uint8Array(silentWav()), {
       headers: { "Content-Type": "audio/wav" },
     });

@@ -18,9 +18,12 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
           </Link>
           <div className="hidden md:flex items-center gap-8 font-['Plus_Jakarta_Sans'] text-sm font-medium tracking-tight">
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/features`}>Features</Link>
-            <Link className="text-primary font-semibold transition-colors duration-200" href={`/${locale}/technology`}>Technology</Link>
+            <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/technology`}>Technology</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/impact`}>Impact</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/about`}>About</Link>
+            <Link className="text-error font-bold hover:text-error/80 transition-colors duration-200 flex items-center gap-1.5" href={`/${locale}/emergency`}>
+              <svg viewBox="0 0 100 100" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="15" fill="currentColor"/><path d="M 35 15 H 65 V 35 H 85 V 65 H 65 V 85 H 35 V 65 H 15 V 35 H 35 Z" fill="white"/></svg> Emergency
+            </Link>
           </div>
           <Link 
             className="bg-primary hover:bg-primary-container text-on-primary px-5 py-2 rounded-xl font-medium transition-all active:scale-95 duration-150"
@@ -162,7 +165,7 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg">
                   <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1", fontSize: "64px" }}>mic</span>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Voice / WhatsApp</p>
                 </div>
               </div>
@@ -175,9 +178,9 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-2">
                   <img src="/logo-sarvam.png" alt="Sarvam AI" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Sarvam AI</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">STT + Translation</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">STT + Translation</p>
                 </div>
               </div>
 
@@ -192,9 +195,9 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                     <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
                   </svg>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Groq AI</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Symptom Analysis</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Symptom Analysis</p>
                 </div>
               </div>
 
@@ -210,9 +213,9 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                     <path d="M22 32l7 7 13-14" stroke="#16A34A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Risk Engine</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">TB / Diabetes / Anemia</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">TB / Diabetes / Anemia</p>
                 </div>
               </div>
 
@@ -224,9 +227,9 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-1">
                   <img src="/logo-abdm.png" alt="ABDM" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">ABDM / PHC</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Health ID + Booking</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Health ID + Booking</p>
                 </div>
               </div>
 
@@ -238,9 +241,9 @@ export default async function TechnologyPage(props: { params: Promise<{ locale: 
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-1">
                   <img src="/logo-asha.png" alt="ASHA / NHM" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">ASHA Worker</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Alert Dashboard</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Alert Dashboard</p>
                 </div>
               </div>
             </div>

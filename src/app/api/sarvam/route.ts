@@ -6,8 +6,7 @@ export async function POST(req: Request) {
     const apiKey = process.env.SARVAM_API_KEY;
 
     // For Hackathon Demo: If API key is not set, return empty (client will use browser TTS fallback)
-    if (!apiKey || apiKey === "your_sarvam_key_here") {
-      console.warn("No SARVAM_API_KEY found, falling back to browser TTS.");
+    if (!apiKey || apiKey.length < 10) {
       return NextResponse.json({ success: true, isMock: true, audio: null });
     }
 
@@ -19,6 +18,7 @@ export async function POST(req: Request) {
       "te-IN": "arvind",
       "kn-IN": "suresh",
       "bn-IN": "indrani",
+      "mr-IN": "aarav",
     };
     const speaker = speakerMap[target_language_code] || "meera";
 
@@ -41,8 +41,6 @@ export async function POST(req: Request) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Sarvam API Error:", errorText);
       return NextResponse.json({ success: false, audio: null, error: "Sarvam API request failed" }, { status: response.status });
     }
 
@@ -58,7 +56,6 @@ export async function POST(req: Request) {
     // Fallback if Sarvam API structure changes unexpectedly
     return NextResponse.json({ success: false, audio: null, error: "Invalid Sarvam API response structure" });
   } catch (error) {
-    console.error("Sarvam Route Error:", error);
     // Returning null audio allows the frontend to gracefully failover to the built-in browser speech
     return NextResponse.json({ success: false, audio: null, error: "Failed to generate speech" }, { status: 500 });
   }

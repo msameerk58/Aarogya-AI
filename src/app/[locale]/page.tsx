@@ -117,12 +117,12 @@ export default function LandingPage() {
             Aarogya AI
           </div>
           <div className="hidden md:flex items-center gap-8 font-['Plus_Jakarta_Sans'] text-sm font-medium tracking-tight">
-            <Link className="text-primary font-semibold transition-colors duration-200" href={`/${locale}/features`}>Features</Link>
+            <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/features`}>Features</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/technology`}>Technology</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/impact`}>Impact</Link>
             <Link className="text-on-surface-variant hover:text-primary transition-colors duration-200" href={`/${locale}/about`}>About</Link>
-            <Link className="text-error font-bold hover:text-error/80 transition-colors duration-200 flex items-center gap-1" href={`/${locale}/emergency`}>
-              <span className="material-symbols-outlined text-sm">emergency</span> Emergency
+            <Link className="text-error font-bold hover:text-error/80 transition-colors duration-200 flex items-center gap-1.5" href={`/${locale}/emergency`}>
+              <svg viewBox="0 0 100 100" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="15" fill="currentColor"/><path d="M 35 15 H 65 V 35 H 85 V 65 H 65 V 85 H 35 V 65 H 15 V 35 H 35 Z" fill="white"/></svg> Emergency
             </Link>
           </div>
           <Link 
@@ -347,7 +347,7 @@ export default function LandingPage() {
         {/* SECTION 4: LIVE DEMO LINKS */}
         <section className="bg-surface-container py-24 px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div className="order-2 lg:order-1">
                 <div className="bg-slate-900 rounded-[2rem] p-4 shadow-2xl overflow-hidden border-4 border-slate-800">
                   <Link href={`/${locale}/chat`} className="block aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl relative group cursor-pointer overflow-hidden border border-white/10">
@@ -361,32 +361,32 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="order-1 lg:order-2 space-y-6">
-                <h2 className="font-h2 text-2xl sm:text-3xl md:text-4xl font-bold text-on-surface leading-tight break-words">Experience the Interface</h2>
-                <p className="text-on-surface-variant font-body-lg text-sm sm:text-base md:text-lg leading-relaxed break-words">We've built Aarogya AI to live where the people are. Choose an interface to see how it bridges the digital divide.</p>
+                <h2 className="font-h2 text-2xl md:text-3xl lg:text-4xl font-bold text-on-surface leading-[1.2]" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>Experience the Interface</h2>
+                <p className="text-on-surface-variant font-body-lg text-base md:text-lg leading-relaxed" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>We've built Aarogya AI to live where the people are. Choose an interface to see how it bridges the digital divide.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Link href={`/${locale}/chat`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group">
+                  <Link href={`/${locale}/chat`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group min-h-[60px]">
                     <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-primary/10 flex-shrink-0">
                       <span className="material-symbols-outlined text-secondary group-hover:text-primary">language</span>
                     </div>
-                    <span className="font-semibold text-sm text-on-surface break-words">Web Chat</span>
+                    <span className="font-semibold text-sm text-on-surface" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>Web Chat</span>
                   </Link>
-                  <Link href={`/${locale}/whatsapp`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group">
+                  <Link href={`/${locale}/whatsapp`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group min-h-[60px]">
                     <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-primary/10 flex-shrink-0">
                       <span className="material-symbols-outlined text-secondary group-hover:text-primary">chat</span>
                     </div>
-                    <span className="font-semibold text-sm text-on-surface break-words">WhatsApp</span>
+                    <span className="font-semibold text-sm text-on-surface" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>WhatsApp</span>
                   </Link>
-                  <Link href={`/${locale}/ivrs`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group">
+                  <Link href={`/${locale}/ivrs`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group min-h-[60px]">
                     <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-primary/10 flex-shrink-0">
                       <span className="material-symbols-outlined text-secondary group-hover:text-primary">call</span>
                     </div>
-                    <span className="font-semibold text-sm text-on-surface break-words">IVRS Call</span>
+                    <span className="font-semibold text-sm text-on-surface" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>IVRS Call</span>
                   </Link>
-                  <Link href={`/${locale}/asha`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group">
+                  <Link href={`/${locale}/asha`} className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-200 hover:border-primary hover:shadow-lg transition-all group min-h-[60px]">
                     <div className="p-2 rounded-lg bg-slate-50 group-hover:bg-primary/10 flex-shrink-0">
                       <span className="material-symbols-outlined text-secondary group-hover:text-primary">health_and_safety</span>
                     </div>
-                    <span className="font-semibold text-sm text-on-surface break-words">ASHA Dash</span>
+                    <span className="font-semibold text-sm text-on-surface" style={{wordWrap: 'break-word', overflowWrap: 'break-word'}}>ASHA Dash</span>
                   </Link>
                 </div>
               </div>
@@ -505,7 +505,7 @@ export default function LandingPage() {
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg">
                   <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1", fontSize: "64px" }}>mic</span>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Voice / WhatsApp</p>
                 </div>
               </div>
@@ -518,9 +518,9 @@ export default function LandingPage() {
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-2">
                   <img src="/logo-sarvam.png" alt="Sarvam AI" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Sarvam AI</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">STT + Translation</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">STT + Translation</p>
                 </div>
               </div>
 
@@ -535,9 +535,9 @@ export default function LandingPage() {
                     <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
                   </svg>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Groq AI</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Symptom Analysis</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Symptom Analysis</p>
                 </div>
               </div>
 
@@ -553,9 +553,9 @@ export default function LandingPage() {
                     <path d="M22 32l7 7 13-14" stroke="#16A34A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">Risk Engine</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">TB / Diabetes / Anemia</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">TB / Diabetes / Anemia</p>
                 </div>
               </div>
 
@@ -567,9 +567,9 @@ export default function LandingPage() {
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-1">
                   <img src="/logo-abdm.png" alt="ABDM" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">ABDM / PHC</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Health ID + Booking</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Health ID + Booking</p>
                 </div>
               </div>
 
@@ -581,9 +581,9 @@ export default function LandingPage() {
                 <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center border-2 border-primary/30 shadow-lg p-1">
                   <img src="/logo-asha.png" alt="ASHA / NHM" className="w-full h-full object-contain" />
                 </div>
-                <div className="flex flex-col items-center w-0 justify-center">
+                <div className="flex flex-col items-center w-0 justify-start h-10 pt-1">
                   <p className="font-label-caps text-xs font-bold text-on-surface tracking-wider whitespace-nowrap">ASHA Worker</p>
-                  <p className="text-[10px] text-on-surface-variant -mt-2 whitespace-nowrap">Alert Dashboard</p>
+                  <p className="text-xs text-on-surface-variant whitespace-nowrap">Alert Dashboard</p>
                 </div>
               </div>
             </div>

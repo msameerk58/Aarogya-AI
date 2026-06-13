@@ -92,17 +92,18 @@ export async function POST(req: Request) {
     }
 
     // Handle special keywords
-    if (body.toLowerCase() === "abha") {
+    const bodyLower = body.toLowerCase();
+    if (bodyLower.includes("abha") || bodyLower.includes("ayushman") || bodyLower.includes("bharat") || bodyLower.includes("health id")) {
       reply = `🆔 *Your ABHA Health ID*\n91-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}\n\nThis is your Ayushman Bharat Digital Health ID. Visit your nearest PHC with this number.`;
       sessions.delete(from); // Reset session
     }
 
-    if (body.toLowerCase() === "phc") {
+    if (bodyLower.includes("phc") || bodyLower.includes("clinic")) {
       reply = `🏥 *Nearest PHC Booked*\n\nPrimary Health Centre\nBangalore Rural District\n📍 Visit with your Aadhaar card\n⏰ Timing: 9AM - 5PM (Mon-Sat)\n\n✅ Appointment confirmed. An alert has been sent to the PHC.`;
       sessions.delete(from); // Reset session
     }
 
-    if (body.toLowerCase() === "reset" || body.toLowerCase() === "start") {
+    if (bodyLower === "reset" || bodyLower === "start") {
       sessions.delete(from);
       reply = "नमस्ते! / Hello! I am Aarogya AI. Please describe your symptoms and I will analyze them based on official ICMR health guidelines.";
     }

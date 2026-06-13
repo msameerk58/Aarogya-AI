@@ -24,11 +24,40 @@ export const ICMR_GUIDELINES = `
 - Symptoms: Sudden onset of profuse, painless watery diarrhea (rice-water stools), vomiting, rapid dehydration.
 - Action: Immediate Oral Rehydration Solution (ORS) and Zinc supplementation. Urgent PHC transfer if severe dehydration.
 
-6. MATERNAL HEALTH (Janani Suraksha Yojana - JSY):
-- Pregnant women must be registered at the sub-center.
-- Ensure 4 Antenatal Care (ANC) visits.
-- High risk if: severe anemia, high BP, bleeding. Refer to First Referral Unit (FRU) immediately.
-- Cash assistance for institutional delivery.
+6. MATERNAL HEALTH (JSY + JSSK + PMSMA):
+- Symptoms: Pregnancy-related checks, severe anemia (hemoglobin < 7), high BP, vaginal bleeding.
+- Action: Ensure 4 Antenatal Care (ANC) visits. High-risk pregnancy must be referred to First Referral Unit (FRU) immediately.
+- Scheme: Janani Suraksha Yojana (JSY) for institutional delivery cash assistance, Janani Shishu Suraksha Karyakaram (JSSK) for free transport/treatment, Pradhan Mantri Surakshit Matritva Abhiyan (PMSMA) for free checkups.
+
+7. ENCEPHALITIS (JE):
+- Symptoms: Acute onset of fever and a change in mental status (confusion, disorientation, coma) or new onset of seizures.
+- Action: Immediate referral to hospital/PHC. Provide cooling measures if high fever.
+- Scheme: Free treatment under National Vector Borne Disease Control Programme (NVBDCP).
+
+8. KALA AZAR (Visceral Leishmaniasis):
+- Symptoms: Irregular fever lasting > 2 weeks, weight loss, enlargement of spleen and liver, anemia.
+- Action: Rk39 rapid diagnostic test.
+- Scheme: Free diagnosis and treatment under NVBDCP.
+
+9. CHILD IMMUNIZATION (Mission Indradhanush / U-WIN):
+- Focus: Children under 5 missing vaccines (BCG, Polio, Measles, DPT).
+- Action: Immediate vaccination at Anganwadi or PHC. Check U-WIN portal.
+- Scheme: Universal Immunization Programme (UIP) - All vaccines are completely free.
+
+10. MALNUTRITION & CHILD HEALTH (Poshan Abhiyaan / ICDS):
+- Symptoms: Child with severe weight loss, fatigue, stunted growth, severe anemia.
+- Action: Register at Anganwadi Centre (AWC). Provide RUTF (Ready-to-Use Therapeutic Food), Iron (IFA), and Zinc. Refer to NRC (Nutritional Rehabilitation Centre) if severe.
+- Scheme: Free nutrition under POSHAN Abhiyaan 2.0 and ICDS.
+
+11. PNEUMONIA & ACUTE RESPIRATORY INFECTION (SAANS Program):
+- Symptoms: Fast breathing, chest indrawing, fever, cough in children under 5.
+- Action: Count breathing rate. Provide Amoxicillin. Immediate PHC referral if severe.
+- Scheme: Free treatment under Social Awareness and Actions to Neutralize Pneumonia Successfully (SAANS).
+
+12. CARDIAC EMERGENCY / CHEST PAIN (NPCDCS Program):
+- Symptoms: Severe chest pain, sweating, dizziness, shortness of breath, left arm pain.
+- Action: This is a medical emergency. Do NOT wait. Call 108 Ambulance immediately.
+- Scheme: Free STEMI management and heart care under PM-JAY and NPCDCS.
 
 Always base your risk assessment and recommendations strictly on these government protocols. If symptoms match, output a HIGH risk level and cite the specific protocol.
 `;
